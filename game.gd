@@ -5,6 +5,8 @@ const AI = preload("res://ghost_ai.gd")
 const Board = preload("res://maze_view.gd")
 const Sounds = preload("res://sounds.gd")
 const ORIGIN = Vector2(12, 47)
+const CORNER_WINDOW := 0.42 # tiles either side of a junction
+const TURN_BUFFER_TIME := 0.15
 const COLORS = [Color("#ff565b"), Color("#ff9cc9"), Color("#55dbe1"), Color("#ffa451")]
 const DIRECTIONS = {
 	KEY_LEFT: Vector2i.LEFT, KEY_A: Vector2i.LEFT, KEY_UP: Vector2i.UP, KEY_W: Vector2i.UP,
@@ -22,6 +24,7 @@ class Actor:
 	var dest: Vector2i
 	var direction := Vector2i.LEFT
 	var progress := 0.0
+	var lane_offset := Vector2.ZERO
 	var state := GhostState.ROAM
 	var scared := false
 
@@ -39,6 +42,7 @@ class Actor:
 
 	func point() -> Vector2:
 		var offset := Vector2(direction) * progress if tile != dest else Vector2.ZERO
+		offset += lane_offset
 		return Vector2(fposmod(tile.x + 0.5 + offset.x, Maze.WIDTH), tile.y + 0.5 + offset.y)
 
 var player: Actor
@@ -47,6 +51,8 @@ var dots: Dictionary
 var home_distance := {}
 var phase := Phase.READY
 var held_keys: Array[Key] = []
+var turn_request := Vector2i.ZERO
+var turn_time := 0.0
 var score := 0
 var lives := 3
 var level := 1
@@ -73,7 +79,7 @@ func _ready() -> void:
 	add_child(board)
 	add_child(sound)
 	get_viewport().size_changed.connect(center_layout)
-	get_window().focus_exited.connect(held_keys.clear)
+	get_window().focus_exited.connect(clear_movement_input)
 	center_layout()
 	# Eyes always take a shortest legal path to the door, including through the tunnel.
 	var frontier: Array[Vector2i] = [Maze.DOOR]
@@ -101,7 +107,7 @@ func new_game() -> void:
 
 func reset_round() -> void:
 	player = Actor.new(Maze.START)
-	held_keys.clear()
+	clear_movement_input()
 	ghosts.clear()
 	for start: Vector2i in [Maze.DOOR, Maze.HOME, Maze.HOME + Vector2i.LEFT * 2, Maze.HOME + Vector2i.RIGHT * 2]:
 		var ghost := Actor.new(start)
@@ -120,12 +126,18 @@ func reset_round() -> void:
 	dot_count = 0
 	queue_redraw()
 
+func clear_movement_input() -> void:
+	held_keys.clear()
+	turn_request = Vector2i.ZERO
+
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event is InputEventKey or event.echo:
 		return
 	var key: Key = event.keycode
 	if not event.pressed:
 		held_keys.erase(key)
+		if held_keys.is_empty():
+			turn_request = Vector2i.ZERO
 		return
 	if key in [KEY_ENTER, KEY_SPACE] and phase == Phase.OVER:
 		new_game()
@@ -139,6 +151,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if phase == Phase.PLAY and DIRECTIONS.has(key):
 		held_keys.erase(key)
 		held_keys.push_front(key)
+		var wanted: Vector2i = DIRECTIONS[key]
+		turn_request = wanted if Vector2(wanted).dot(Vector2(player.direction)) == 0 else Vector2i.ZERO
+		turn_time = TURN_BUFFER_TIME
 
 func _physics_process(delta: float) -> void:
 	if paused:
@@ -159,14 +174,17 @@ func _physics_process(delta: float) -> void:
 		update_modes(delta)
 		var speed := 8.0 + minf(level - 1, 5) * 0.3
 		advance(player, -1, speed * delta)
+		turn_time -= delta
+		if turn_time <= 0:
+			turn_request = Vector2i.ZERO
 		if phase == Phase.PLAY:
 			for i in ghosts.size():
 				var ghost := ghosts[i]
-				var rate := speed * 0.92
+				var rate := speed * 0.72
 				if ghost.state in [GhostState.EYES, GhostState.ENTER]:
 					rate = 16.0
 				elif ghost.scared or (ghost.tile.y == 14 and (ghost.tile.x < 6 or ghost.tile.x > 21)):
-					rate = speed * 0.58
+					rate = speed * 0.50
 				advance(ghost, i, rate * delta)
 				collide(ghost)
 				if phase != Phase.PLAY:
@@ -202,17 +220,26 @@ func advance(actor: Actor, kind: int, distance: float) -> void:
 	if kind == -1:
 		if held_keys.is_empty():
 			return
-		if actor.tile != actor.dest and DIRECTIONS[held_keys[0]] == -actor.direction:
+		var wanted: Vector2i = turn_request if turn_request != Vector2i.ZERO else DIRECTIONS[held_keys[0]]
+		if Vector2(wanted).dot(Vector2(actor.direction)) == 0:
+			try_corner(wanted)
+			if phase != Phase.PLAY:
+				return
+		elif actor.tile != actor.dest and wanted == -actor.direction:
 			actor.reverse()
 	while distance > 0.00001:
 		if actor.tile == actor.dest:
 			var step := Vector2i.ZERO
 			if kind == -1:
-				for key in held_keys:
-					var wanted: Vector2i = DIRECTIONS[key]
-					if Maze.walkable(Maze.next(actor.tile, wanted)):
-						step = wanted
-						break
+				if turn_request != Vector2i.ZERO and Maze.walkable(Maze.next(actor.tile, turn_request)):
+					step = turn_request
+					turn_request = Vector2i.ZERO
+				else:
+					for key in held_keys:
+						var wanted: Vector2i = DIRECTIONS[key]
+						if Maze.walkable(Maze.next(actor.tile, wanted)):
+							step = wanted
+							break
 			else:
 				step = ghost_step(actor, kind)
 			if step == Vector2i.ZERO:
@@ -222,6 +249,7 @@ func advance(actor: Actor, kind: int, distance: float) -> void:
 		var moved := minf(distance, 1.0 - actor.progress)
 		distance -= moved
 		actor.progress += moved
+		actor.lane_offset = actor.lane_offset.move_toward(Vector2.ZERO, moved)
 		if actor.progress >= 0.99999:
 			actor.tile = actor.dest
 			actor.progress = 0
@@ -229,6 +257,31 @@ func advance(actor: Actor, kind: int, distance: float) -> void:
 				eat_dot()
 				if phase != Phase.PLAY:
 					return
+
+func try_corner(wanted: Vector2i) -> void:
+	if player.tile == player.dest or not player.lane_offset.is_zero_approx():
+		return
+	# Choose the nearby junction on the current edge. Keep the exact world
+	# position and bleed off the sideways distance while moving down the new lane.
+	var junction := player.tile
+	var sideways := player.progress
+	if 1.0 - player.progress <= CORNER_WINDOW:
+		junction = player.dest
+		sideways -= 1.0
+	elif player.progress > CORNER_WINDOW or turn_request == Vector2i.ZERO:
+		# Only a fresh tap can reclaim a passed junction. A still-held forward
+		# key from before the turn must not pull the player back into that lane.
+		return
+	var exit_tile := Maze.next(junction, wanted)
+	if not Maze.walkable(exit_tile):
+		return
+	player.lane_offset = Vector2(player.direction) * sideways
+	player.tile = junction
+	player.dest = exit_tile
+	player.direction = wanted
+	player.progress = 0
+	turn_request = Vector2i.ZERO
+	eat_dot()
 
 func ghost_step(ghost: Actor, kind: int) -> Vector2i:
 	if ghost.state == GhostState.PEN:
@@ -352,11 +405,11 @@ func _draw() -> void:
 		if ghost.scared:
 			tint = Color("#686fc0") if power_left < 2 and int(clock * 7) % 2 == 0 else Color("#354ef4")
 		var pos := ORIGIN + ghost.point() * Board.CELL
-		ghost_icon(pos, 9, tint, ghost.direction, ghost.state in [GhostState.EYES, GhostState.ENTER], ghost.scared)
+		ghost_icon(pos, 11.8, tint, ghost.direction, ghost.state in [GhostState.EYES, GhostState.ENTER], ghost.scared)
 	var openness := 0.14 + 0.61 * absf(sin(clock * 11)) if player.tile != player.dest and not held_keys.is_empty() else 0.58
 	if phase == Phase.DYING:
 		openness = lerpf(0.3, PI - 0.01, minf(1.0, phase_time))
-	pac_icon(ORIGIN + player.point() * Board.CELL, 9.5, Vector2(player.direction).angle(), openness)
+	pac_icon(ORIGIN + player.point() * Board.CELL, 12, Vector2(player.direction).angle(), openness)
 	var status := ""
 	if paused:
 		status = "已暂停"
