@@ -18,12 +18,12 @@ static func chase_target(kind: int, tile: Vector2i, player: Vector2i, facing: Ve
 				return CORNERS[Kind.CLYDE]
 	return player
 
-static func turn(tile: Vector2i, facing: Vector2i, target: Vector2i, frightened: bool) -> Vector2i:
+static func turn(maze: Maze, tile: Vector2i, facing: Vector2i, target: Vector2i, frightened: bool) -> Vector2i:
 	var choices: Array[Vector2i] = []
 	for direction: Vector2i in Maze.ORDER:
-		if direction == -facing or not Maze.walkable(Maze.next(tile, direction)):
+		if direction == -facing or not maze.walkable(Maze.next(tile, direction)):
 			continue
-		if not frightened and direction == Vector2i.UP and tile.y in [11, 23] and tile.x in [12, 15]:
+		if maze.rows == Maze.ROWS and not frightened and direction == Vector2i.UP and tile.y in [11, 23] and tile.x in [12, 15]:
 			continue
 		choices.append(direction)
 	if choices.is_empty():

@@ -5,9 +5,12 @@ const CELL = 20
 const INSET = 4.5
 const EDGE = Color("#4869ff")
 const FILL = Color("#141e55")
+var maze: Maze
+var edge := EDGE
+var fill := FILL
 
 func wall(x: int, y: int) -> bool:
-	return Rect2i(0, 0, Maze.WIDTH, Maze.HEIGHT).has_point(Vector2i(x, y)) and Maze.ROWS[y][x] == "#"
+	return Rect2i(0, 0, Maze.WIDTH, Maze.HEIGHT).has_point(Vector2i(x, y)) and maze.rows[y][x] == "#"
 
 func _draw() -> void:
 	# Inset the wall boundary into the solid tiles. Each quadrant joins its
@@ -35,12 +38,12 @@ func _draw() -> void:
 						points.append(b)
 					points.append(top)
 					draw_set_transform((Vector2(x, y) + Vector2(0.5, 0.5)) * CELL, 0, Vector2(dx, dy))
-					draw_colored_polygon(points, FILL)
+					draw_colored_polygon(points, fill)
 					if open_x:
-						draw_line(side, a, EDGE, 1.6, true)
+						draw_line(side, a, edge, 1.6, true)
 					if bevel > 0:
-						draw_line(a, b, EDGE, 1.6, true)
+						draw_line(a, b, edge, 1.6, true)
 					if open_y:
-						draw_line(b, top, EDGE, 1.6, true)
+						draw_line(b, top, edge, 1.6, true)
 	draw_set_transform(Vector2.ZERO)
 	draw_line(Vector2(13 * CELL - INSET, 12.5 * CELL), Vector2(15 * CELL + INSET, 12.5 * CELL), Color("#ffacda"), 3)

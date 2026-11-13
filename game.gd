@@ -1,6 +1,7 @@
 extends Node2D
 
 const Maze = preload("res://maze.gd")
+const Stages = preload("res://stages.gd")
 const AI = preload("res://ghost_ai.gd")
 const Board = preload("res://maze_view.gd")
 const Sounds = preload("res://sounds.gd")
@@ -45,6 +46,12 @@ class Actor:
 		offset += lane_offset
 		return Vector2(fposmod(tile.x + 0.5 + offset.x, Maze.WIDTH), tile.y + 0.5 + offset.y)
 
+var maze: Maze
+var stage := -1 # -1 selects the classic maze.
+var items := {}
+var item_total := 0
+var freeze_left := 0.0
+var double_left := 0.0
 var player: Actor
 var ghosts: Array[Actor] = []
 var dots: Dictionary
@@ -81,6 +88,25 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(center_layout)
 	get_window().focus_exited.connect(clear_movement_input)
 	center_layout()
+	new_game()
+
+func load_level() -> void:
+	stage = (level - 1) % (Stages.LAYOUTS.size() + 1) - 1
+	maze = Maze.new(Maze.ROWS if stage < 0 else Stages.LAYOUTS[stage])
+	board.maze = maze
+	board.edge = Board.EDGE if stage < 0 else Stages.COLORS[stage].darkened(0.27)
+	board.fill = Board.FILL if stage < 0 else board.edge.darkened(0.78)
+	board.queue_redraw()
+	dots = maze.collectibles()
+	items.clear()
+	for y in Maze.HEIGHT:
+		for x in Maze.WIDTH:
+			if maze.rows[y][x] == "*":
+				items[Vector2i(x, y)] = true
+	item_total = items.size()
+	freeze_left = 0
+	double_left = 0
+	home_distance.clear()
 	# Eyes always take a shortest legal path to the door, including through the tunnel.
 	var frontier: Array[Vector2i] = [Maze.DOOR]
 	home_distance[Maze.DOOR] = 0
@@ -90,10 +116,10 @@ func _ready() -> void:
 		i += 1
 		for d: Vector2i in Maze.ORDER:
 			var next := Maze.next(tile, d)
-			if Maze.walkable(next) and not home_distance.has(next):
+			if maze.walkable(next) and not home_distance.has(next):
 				frontier.append(next)
 				home_distance[next] = home_distance[tile] + 1
-	new_game()
+	reset_round()
 
 func center_layout() -> void:
 	position = (get_viewport_rect().size - Vector2(584, 700)) * 0.5
@@ -102,8 +128,7 @@ func new_game() -> void:
 	score = 0
 	lives = 3
 	level = 1
-	dots = Maze.collectibles()
-	reset_round()
+	load_level()
 
 func reset_round() -> void:
 	player = Actor.new(Maze.START)
@@ -167,10 +192,11 @@ func _physics_process(delta: float) -> void:
 			phase = Phase.OVER
 	elif phase == Phase.CLEAR and phase_time >= 1.3:
 		level += 1
-		dots = Maze.collectibles()
-		reset_round()
+		load_level()
 	elif phase == Phase.PLAY:
 		round_time += delta
+		freeze_left = maxf(0, freeze_left - delta)
+		double_left = maxf(0, double_left - delta)
 		update_modes(delta)
 		var speed := 8.0 + minf(level - 1, 5) * 0.3
 		advance(player, -1, speed * delta)
@@ -185,7 +211,8 @@ func _physics_process(delta: float) -> void:
 					rate = 16.0
 				elif ghost.scared or (ghost.tile.y == 14 and (ghost.tile.x < 6 or ghost.tile.x > 21)):
 					rate = speed * 0.50
-				advance(ghost, i, rate * delta)
+				if freeze_left <= 0 or ghost.state in [GhostState.EYES, GhostState.ENTER]:
+					advance(ghost, i, rate * delta)
 				collide(ghost)
 				if phase != Phase.PLAY:
 					break
@@ -210,7 +237,7 @@ func reverse_roaming(ghost: Actor) -> void:
 		return
 	if ghost.tile == ghost.dest:
 		var back := Maze.next(ghost.tile, -ghost.direction)
-		if Maze.walkable(back):
+		if maze.walkable(back):
 			ghost.reverse()
 			ghost.dest = back
 	else:
@@ -231,13 +258,13 @@ func advance(actor: Actor, kind: int, distance: float) -> void:
 		if actor.tile == actor.dest:
 			var step := Vector2i.ZERO
 			if kind == -1:
-				if turn_request != Vector2i.ZERO and Maze.walkable(Maze.next(actor.tile, turn_request)):
+				if turn_request != Vector2i.ZERO and maze.walkable(Maze.next(actor.tile, turn_request)):
 					step = turn_request
 					turn_request = Vector2i.ZERO
 				else:
 					for key in held_keys:
 						var wanted: Vector2i = DIRECTIONS[key]
-						if Maze.walkable(Maze.next(actor.tile, wanted)):
+						if maze.walkable(Maze.next(actor.tile, wanted)):
 							step = wanted
 							break
 			else:
@@ -273,7 +300,7 @@ func try_corner(wanted: Vector2i) -> void:
 		# key from before the turn must not pull the player back into that lane.
 		return
 	var exit_tile := Maze.next(junction, wanted)
-	if not Maze.walkable(exit_tile):
+	if not maze.walkable(exit_tile):
 		return
 	player.lane_offset = Vector2(player.direction) * sideways
 	player.tile = junction
@@ -309,15 +336,31 @@ func ghost_step(ghost: Actor, kind: int) -> Vector2i:
 	var target: Vector2i = AI.CORNERS[kind]
 	if wave % 2 == 1:
 		target = AI.chase_target(kind, ghost.tile, player.tile, player.direction, ghosts[0].tile)
-	return AI.turn(ghost.tile, ghost.direction, target, ghost.scared)
+	return AI.turn(maze, ghost.tile, ghost.direction, target, ghost.scared)
 
 func eat_dot() -> void:
-	if not dots.has(player.tile):
+	if items.erase(player.tile):
+		if items.is_empty():
+			match stage:
+				0: score += 500
+				1: freeze_left = 5.0
+				2: double_left = 12.0
+				3: lives += 1
+		sound.cue("reward" if items.is_empty() else "item")
+	elif dots.has(player.tile):
+		eat_pellet()
+	else:
 		return
+	if dots.is_empty() and items.is_empty():
+		phase = Phase.CLEAR
+		phase_time = 0
+		sound.cue("clear")
+
+func eat_pellet() -> void:
 	var power: bool = dots[player.tile]
 	dots.erase(player.tile)
 	dot_count += 1
-	score += 50 if power else 10
+	score += (50 if power else 10) * (2 if double_left > 0 else 1)
 	if power:
 		power_left = maxf(2, 6 - (level - 1) * 0.5)
 		combo = 0
@@ -328,10 +371,6 @@ func eat_dot() -> void:
 		sound.cue("power")
 	else:
 		sound.cue("dot" if dot_count % 2 == 0 else "dot2")
-	if dots.is_empty():
-		phase = Phase.CLEAR
-		phase_time = 0
-		sound.cue("clear")
 
 func collide(ghost: Actor) -> void:
 	if ghost.state != GhostState.ROAM:
@@ -383,14 +422,37 @@ func pac_icon(at: Vector2, radius: float, angle: float, opening: float) -> void:
 		shape.append(at + radius * Vector2(cos(theta), sin(theta)))
 	draw_colored_polygon(shape, GOLD)
 
+func item_icon(at: Vector2) -> void:
+	var color: Color = Stages.COLORS[stage]
+	draw_circle(at, 9.5, color.darkened(0.82), true, -1, true)
+	match stage:
+		0:
+			draw_arc(at + Vector2(-3, -2), 3.2, 0, TAU, 20, color, 2, true)
+			draw_line(at, at + Vector2(6, 6), color, 2, true)
+			draw_line(at + Vector2(3, 3), at + Vector2(5, 1), color, 2, true)
+		1:
+			draw_colored_polygon(PackedVector2Array([at + Vector2(0, -8), at + Vector2(6, -1), at + Vector2(0, 8), at + Vector2(-6, -1)]), color)
+			draw_line(at + Vector2(-5, -1), at + Vector2(5, -1), color.darkened(0.4), 1.5)
+		2:
+			draw_rect(Rect2(at + Vector2(-5, -6), Vector2(10, 13)), color, false, 1.7)
+			draw_rect(Rect2(at + Vector2(-2, -8), Vector2(4, 2)), color)
+			draw_rect(Rect2(at + Vector2(-3, 0), Vector2(6, 5)), color)
+		3:
+			var star := PackedVector2Array()
+			for i in 10:
+				star.append(at + Vector2.UP.rotated(i * PI / 5) * (8 if i % 2 == 0 else 3.5))
+			draw_colored_polygon(star, color)
+
 func _draw() -> void:
 	if player == null:
 		return
 	label(Vector2(12, 34), "得分", 19, MUTED)
 	label(Vector2(65, 35), "%06d" % score, 30, INK, true)
 	label(Vector2(242, 34), "生命", 19, MUTED)
-	for i in lives:
+	for i in mini(lives, 4):
 		pac_icon(Vector2(304 + i * 22, 26), 8, 0, 0.59)
+	if lives > 4:
+		label(Vector2(388, 33), "+%d" % (lives - 4), 16, GOLD)
 	label(Vector2(459, 34), "关卡", 19, MUTED)
 	label(Vector2(519, 35), "%02d" % level, 27, GOLD, true)
 	for tile: Vector2i in dots:
@@ -399,11 +461,15 @@ func _draw() -> void:
 			draw_circle(at, 5.4 + 0.9 * sin(clock * 6), Color("#ffe1bb"), true, -1, true)
 		else:
 			draw_circle(at, 2, Color("#efc6a8"))
+	for tile: Vector2i in items:
+		item_icon(ORIGIN + (Vector2(tile) + Vector2(0.5, 0.5)) * Board.CELL)
 	for i in ghosts.size():
 		var ghost := ghosts[i]
 		var tint: Color = COLORS[i]
 		if ghost.scared:
 			tint = Color("#686fc0") if power_left < 2 and int(clock * 7) % 2 == 0 else Color("#354ef4")
+		elif freeze_left > 0:
+			tint = Color("#acdeff")
 		var pos := ORIGIN + ghost.point() * Board.CELL
 		ghost_icon(pos, 11.8, tint, ghost.direction, ghost.state in [GhostState.EYES, GhostState.ENTER], ghost.scared)
 	var openness := 0.14 + 0.61 * absf(sin(clock * 11)) if player.tile != player.dest and not held_keys.is_empty() else 0.58
@@ -414,7 +480,7 @@ func _draw() -> void:
 	if paused:
 		status = "已暂停"
 	elif phase == Phase.READY:
-		status = "READY!"
+		status = "READY!" if stage < 0 else Stages.TITLES[stage]
 	elif phase == Phase.CLEAR:
 		status = "过关！"
 	elif phase == Phase.OVER:
@@ -427,7 +493,18 @@ func _draw() -> void:
 	var hint := "按住方向键 / WASD 移动，松开即停     ·     空格暂停"
 	if phase == Phase.READY:
 		hint = "按住方向键 / WASD 开始移动，松开即停"
-	elif paused:
+	if stage >= 0:
+		if not items.is_empty():
+			hint = "%s %d/%d  ·  集齐获得%s" % [Stages.ITEMS[stage], item_total - items.size(), item_total, Stages.REWARDS[stage]]
+		elif freeze_left > 0:
+			hint = "冰晶已集齐  ·  幽灵冻结 %d 秒" % ceili(freeze_left)
+		elif double_left > 0:
+			hint = "电池已集齐  ·  双倍豆分 %d 秒" % ceili(double_left)
+		elif stage in [1, 2]:
+			hint = "任务已完成  ·  吃完剩余豆子过关"
+		else:
+			hint = "任务已完成  ·  %s" % Stages.REWARDS[stage]
+	if paused:
 		hint = "按空格或 P  继续游戏"
 	elif phase == Phase.OVER:
 		hint = "按回车或空格重新开局"

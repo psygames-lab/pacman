@@ -20,6 +20,99 @@ func press(key: Key, down := true) -> void:
 func _initialize() -> void:
 	call_deferred("run")
 
+# Drive the normal movement and collection code one full tile at a time.
+func walk_to(goal: Vector2i) -> void:
+	var start := game.player.tile
+	var queue: Array[Vector2i] = [start]
+	var route := {start: Vector2i.ZERO}
+	var i := 0
+	while i < queue.size() and not route.has(goal):
+		var tile := queue[i]
+		i += 1
+		for d: Vector2i in Maze.ORDER:
+			var dest := Maze.next(tile, d)
+			if not route.has(dest) and game.maze.walkable(dest):
+				route[dest] = d
+				queue.append(dest)
+	if not route.has(goal):
+		check(false, "unreachable target " + str(goal))
+		return
+	var path: Array[Vector2i] = []
+	var tile := goal
+	while tile != start:
+		var d: Vector2i = route[tile]
+		path.push_front(d)
+		tile = Maze.next(tile, -d)
+	for d in path:
+		var key: Key = [KEY_UP, KEY_LEFT, KEY_DOWN, KEY_RIGHT][Maze.ORDER.find(d)]
+		press(key)
+		game.advance(game.player, -1, 1)
+		press(key, false)
+	check(game.player.tile == goal, "walked to " + str(goal))
+
+func check_campaign() -> void:
+	for stage in 4:
+		check(game.stage == stage and game.phase == Game.Phase.READY, "enter new maze")
+		check(game.items.size() == [2, 3, 3, 3][stage], "mission item count")
+		check(game.dots.values().count(true) == 4, "four reachable power pellets")
+		for y in Maze.HEIGHT:
+			check(game.maze.rows[y].length() == Maze.WIDTH, "stage row width")
+			for x in Maze.WIDTH:
+				var tile := Vector2i(x, y)
+				if game.maze.walkable(tile):
+					check(game.home_distance.has(tile), "ghosts can return home from " + str(tile))
+		press(KEY_SPACE)
+		var targets := game.items.keys()
+		walk_to(targets[0])
+		var remaining := game.items.size()
+		game.reset_round()
+		check(game.items.size() == remaining and remaining == targets.size() - 1, "collected item survives respawn")
+		press(KEY_SPACE)
+		# Reserve the final item to check the dots-first completion order on the last map.
+		var last: Vector2i = targets.back()
+		if stage == 3:
+			for dot: Vector2i in game.dots.keys():
+				if game.dots.has(dot):
+					game.player = Game.Actor.new(dot)
+					game.eat_dot()
+			check(game.phase == Game.Phase.PLAY, "all dots alone do not clear a mission")
+		for target in targets:
+			if target != last and game.items.has(target):
+				walk_to(target)
+		# Test the exact reward in isolation by stepping onto the last item's tile.
+		var entry := Vector2i.ZERO
+		for d: Vector2i in Maze.ORDER:
+			if game.maze.walkable(Maze.next(last, d)):
+				entry = Maze.next(last, d)
+				break
+		game.player = Game.Actor.new(entry)
+		var points := game.score
+		var lives_before := game.lives
+		walk_to(last)
+		check(game.items.is_empty(), "mission completed")
+		match stage:
+			0: check(game.score == points + 500, "vault bonus")
+			1:
+				var position_before := game.ghosts[0].point()
+				game._physics_process(0.1)
+				check(is_equal_approx(game.freeze_left, 4.9) and game.ghosts[0].point() == position_before, "frozen ghost stays still")
+			2:
+				var dot: Vector2i = game.dots.keys()[0]
+				var expected := 100 if game.dots[dot] else 20
+				game.player = Game.Actor.new(dot)
+				game.eat_dot()
+				check(game.score == points + expected, "double pellet points")
+			3: check(game.lives == lives_before + 1, "extra life")
+		if game.phase == Game.Phase.PLAY:
+			game.reset_round()
+			press(KEY_SPACE)
+			for dot: Vector2i in game.dots.keys():
+				if game.dots.has(dot):
+					walk_to(dot)
+		check(game.phase == Game.Phase.CLEAR, "mission and pellets clear the stage")
+		game._physics_process(1.4)
+	check(game.level == 6 and game.stage == -1 and game.dots.size() == 244, "next arcade cycle starts")
+
 func run() -> void:
 	game = preload("res://game.tscn").instantiate()
 	root.add_child(game)
@@ -34,8 +127,8 @@ func run() -> void:
 	check(AI.chase_target(2, red, p, Vector2i.RIGHT, red + Vector2i.RIGHT) == Vector2i(20, 12), "Moving Blinky changes Inky target")
 	check(AI.chase_target(3, Vector2i(2, 10), p, Vector2i.LEFT, red) == p, "Clyde chases at eight")
 	check(AI.chase_target(3, Vector2i(5, 5), p, Vector2i.LEFT, red) == AI.CORNERS[3], "Clyde uses Euclidean distance")
-	check(AI.turn(Vector2i(6, 5), Vector2i.LEFT, Vector2i(5, 4), false) == Vector2i.UP, "equal distance uses arcade priority")
-	check(AI.turn(Vector2i(6, 5), Vector2i.LEFT, Vector2i(7, 5), false) != Vector2i.RIGHT, "no voluntary U-turn")
+	check(AI.turn(game.maze, Vector2i(6, 5), Vector2i.LEFT, Vector2i(5, 4), false) == Vector2i.UP, "equal distance uses arcade priority")
+	check(AI.turn(game.maze, Vector2i(6, 5), Vector2i.LEFT, Vector2i(7, 5), false) != Vector2i.RIGHT, "no voluntary U-turn")
 	check(game.dots.size() == 244 and game.dots.values().count(true) == 4, "240 pellets and four energizers")
 	for tile in game.dots:
 		check(game.home_distance.has(tile), "reachable pellet " + str(tile))
@@ -164,7 +257,8 @@ func run() -> void:
 	game.eat_dot()
 	check(game.phase == Game.Phase.CLEAR, "last pellet clears level")
 	game._physics_process(1.4)
-	check(game.level == 2 and game.dots.size() == 244 and game.score == 10, "next level preserves score")
+	check(game.level == 2 and game.items.size() == 2 and not game.dots.is_empty() and game.score == 10, "next level preserves score")
+	check_campaign()
 	if failures.is_empty():
 		print("PASS: ghost targeting, routing, maze, movement, power, lives and level cycle")
 	game.sound.stop()

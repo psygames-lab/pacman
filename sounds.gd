@@ -11,6 +11,8 @@ func _ready() -> void:
 	# Each note has a starting frequency, ending frequency and duration in seconds.
 	clips["dot"] = chip_sound([[570, 230, 0.075]], 0.38)
 	clips["dot2"] = chip_sound([[255, 490, 0.068]], 0.38)
+	clips["item"] = chip_sound([[660, 660, 0.065], [880, 880, 0.10]], 0.56)
+	clips["reward"] = chip_sound([[523, 523, 0.07], [784, 784, 0.07], [988, 988, 0.08], [1175, 1175, 0.18]], 0.60)
 	clips["power"] = chip_sound([[196, 196, 0.09], [294, 294, 0.08], [392, 392, 0.08], [587, 784, 0.17]], 0.78)
 	clips["capture"] = chip_sound([[440, 690, 0.055], [660, 990, 0.065], [880, 1320, 0.13]], 0.64)
 	clips["death"] = chip_sound([[622, 523, 0.11], [494, 392, 0.12], [370, 277, 0.14], [247, 92, 0.34]], 0.58)
