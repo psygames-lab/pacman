@@ -11,10 +11,10 @@ func check(ok: bool, note: String) -> void:
 		failures.append(note)
 		printerr("FAIL ", note)
 
-func press(key: Key) -> void:
+func press(key: Key, down := true) -> void:
 	var event := InputEventKey.new()
 	event.keycode = key
-	event.pressed = true
+	event.pressed = down
 	game._unhandled_key_input(event)
 
 func _initialize() -> void:
@@ -41,20 +41,46 @@ func run() -> void:
 		check(game.home_distance.has(tile), "reachable pellet " + str(tile))
 	for row: String in Maze.ROWS:
 		check(row.length() == Maze.WIDTH, "maze row width")
+	press(KEY_SPACE)
+	var start := game.player.point()
+	game._physics_process(1.0 / 60)
+	check(game.player.point() == start, "starting with space waits for direction")
 	press(KEY_LEFT)
 	for i in 28:
 		game._physics_process(1.0 / 60)
 	check(game.phase == Game.Phase.PLAY and game.score > 0, "opening move scores")
+	press(KEY_LEFT, false)
+	var stopped := game.player.point()
+	game._physics_process(1.0 / 60)
+	check(game.player.point() == stopped, "release stops between tile centers")
+	press(KEY_A)
+	press(KEY_RIGHT)
+	game._physics_process(1.0 / 60)
+	check(game.player.point().x > stopped.x, "last held direction reverses mid-tile")
+	press(KEY_RIGHT, false)
+	var reversed := game.player.point()
+	game._physics_process(1.0 / 60)
+	check(game.player.point().x < reversed.x, "releasing right resumes held A")
 	press(KEY_P)
 	var before := game.player.point()
 	game._physics_process(0.25)
 	check(game.paused and game.player.point() == before, "pause freezes movement")
 	press(KEY_P)
+	game.player = Game.Actor.new(Vector2i(5, 5))
+	press(KEY_A, false)
+	press(KEY_RIGHT)
+	press(KEY_UP)
+	game.advance(game.player, -1, 2)
+	check(game.player.tile == Vector2i(6, 4), "hold forward and turn at the first opening")
+	game.get_window().focus_exited.emit()
+	before = game.player.point()
+	game.advance(game.player, -1, 1)
+	check(game.player.point() == before, "focus loss clears held keys")
 	game.player = Game.Actor.new(Vector2i(0, 14))
-	game.queued = Vector2i.LEFT
+	press(KEY_LEFT)
 	game.advance(game.player, -1, 1)
 	check(game.player.tile == Vector2i(27, 14), "left tunnel wraps")
-	game.queued = Vector2i.RIGHT
+	press(KEY_RIGHT)
 	game.advance(game.player, -1, 1)
 	check(game.player.tile == Vector2i(0, 14), "right tunnel wraps")
 	game.player = Game.Actor.new(Vector2i(1, 3))

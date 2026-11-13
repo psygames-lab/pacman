@@ -4,10 +4,12 @@ const Maze = preload("res://maze.gd")
 const AI = preload("res://ghost_ai.gd")
 const Board = preload("res://maze_view.gd")
 const Sounds = preload("res://sounds.gd")
-const ORIGIN = Vector2(38, 95)
+const ORIGIN = Vector2(12, 47)
 const COLORS = [Color("#ff565b"), Color("#ff9cc9"), Color("#55dbe1"), Color("#ffa451")]
-const NAMES = ["Blinky", "Pinky", "Inky", "Clyde"]
-const NOTES = ["锁定你所在的格子", "埋伏在前方四格", "借红鬼的位置包抄", "八格外追击，靠近就撤"]
+const DIRECTIONS = {
+	KEY_LEFT: Vector2i.LEFT, KEY_A: Vector2i.LEFT, KEY_UP: Vector2i.UP, KEY_W: Vector2i.UP,
+	KEY_RIGHT: Vector2i.RIGHT, KEY_D: Vector2i.RIGHT, KEY_DOWN: Vector2i.DOWN, KEY_S: Vector2i.DOWN,
+}
 const WAVE = [7.0, 20.0, 7.0, 20.0, 5.0, 20.0, 5.0, INF]
 const GOLD = Color("#ffdc52")
 const INK = Color("#f1f2fb")
@@ -44,7 +46,7 @@ var ghosts: Array[Actor] = []
 var dots: Dictionary
 var home_distance := {}
 var phase := Phase.READY
-var queued := Vector2i.LEFT
+var held_keys: Array[Key] = []
 var score := 0
 var lives := 3
 var level := 1
@@ -70,6 +72,9 @@ func _ready() -> void:
 	board.show_behind_parent = true
 	add_child(board)
 	add_child(sound)
+	get_viewport().size_changed.connect(center_layout)
+	get_window().focus_exited.connect(held_keys.clear)
+	center_layout()
 	# Eyes always take a shortest legal path to the door, including through the tunnel.
 	var frontier: Array[Vector2i] = [Maze.DOOR]
 	home_distance[Maze.DOOR] = 0
@@ -84,6 +89,9 @@ func _ready() -> void:
 				home_distance[next] = home_distance[tile] + 1
 	new_game()
 
+func center_layout() -> void:
+	position = (get_viewport_rect().size - Vector2(584, 700)) * 0.5
+
 func new_game() -> void:
 	score = 0
 	lives = 3
@@ -93,7 +101,7 @@ func new_game() -> void:
 
 func reset_round() -> void:
 	player = Actor.new(Maze.START)
-	queued = Vector2i.LEFT
+	held_keys.clear()
 	ghosts.clear()
 	for start: Vector2i in [Maze.DOOR, Maze.HOME, Maze.HOME + Vector2i.LEFT * 2, Maze.HOME + Vector2i.RIGHT * 2]:
 		var ghost := Actor.new(start)
@@ -113,9 +121,12 @@ func reset_round() -> void:
 	queue_redraw()
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not event is InputEventKey or not event.pressed or event.echo:
+	if not event is InputEventKey or event.echo:
 		return
-	var key: int = event.keycode
+	var key: Key = event.keycode
+	if not event.pressed:
+		held_keys.erase(key)
+		return
 	if key in [KEY_ENTER, KEY_SPACE] and phase == Phase.OVER:
 		new_game()
 		return
@@ -123,14 +134,11 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		paused = not paused
 		queue_redraw()
 		return
-	var keys := {KEY_LEFT: Vector2i.LEFT, KEY_A: Vector2i.LEFT, KEY_UP: Vector2i.UP, KEY_W: Vector2i.UP,
-		KEY_RIGHT: Vector2i.RIGHT, KEY_D: Vector2i.RIGHT, KEY_DOWN: Vector2i.DOWN, KEY_S: Vector2i.DOWN}
-	if phase == Phase.READY and (keys.has(key) or key in [KEY_ENTER, KEY_SPACE]):
+	if phase == Phase.READY and (DIRECTIONS.has(key) or key in [KEY_ENTER, KEY_SPACE]):
 		phase = Phase.PLAY
-	if phase == Phase.PLAY and not paused and keys.has(key):
-		queued = keys[key]
-		if queued == -player.direction and player.tile != player.dest:
-			player.reverse()
+	if phase == Phase.PLAY and DIRECTIONS.has(key):
+		held_keys.erase(key)
+		held_keys.push_front(key)
 
 func _physics_process(delta: float) -> void:
 	if paused:
@@ -191,14 +199,20 @@ func reverse_roaming(ghost: Actor) -> void:
 		ghost.reverse()
 
 func advance(actor: Actor, kind: int, distance: float) -> void:
+	if kind == -1:
+		if held_keys.is_empty():
+			return
+		if actor.tile != actor.dest and DIRECTIONS[held_keys[0]] == -actor.direction:
+			actor.reverse()
 	while distance > 0.00001:
 		if actor.tile == actor.dest:
 			var step := Vector2i.ZERO
 			if kind == -1:
-				if Maze.walkable(Maze.next(actor.tile, queued)):
-					step = queued
-				elif Maze.walkable(Maze.next(actor.tile, actor.direction)):
-					step = actor.direction
+				for key in held_keys:
+					var wanted: Vector2i = DIRECTIONS[key]
+					if Maze.walkable(Maze.next(actor.tile, wanted)):
+						step = wanted
+						break
 			else:
 				step = ghost_step(actor, kind)
 			if step == Vector2i.ZERO:
@@ -319,11 +333,13 @@ func pac_icon(at: Vector2, radius: float, angle: float, opening: float) -> void:
 func _draw() -> void:
 	if player == null:
 		return
-	pac_icon(Vector2(56, 49), 18, 0, 0.62)
-	label(Vector2(86, 62), "PAC-MAN", 39, INK, true)
-	draw_line(Vector2(38, 79), Vector2(922, 79), Color("#333e59"), 1)
-	label(Vector2(776, 56), "关卡", 17, MUTED)
-	label(Vector2(839, 59), "%02d" % level, 29, GOLD, true)
+	label(Vector2(12, 34), "得分", 19, MUTED)
+	label(Vector2(65, 35), "%06d" % score, 30, INK, true)
+	label(Vector2(242, 34), "生命", 19, MUTED)
+	for i in lives:
+		pac_icon(Vector2(304 + i * 22, 26), 8, 0, 0.59)
+	label(Vector2(459, 34), "关卡", 19, MUTED)
+	label(Vector2(519, 35), "%02d" % level, 27, GOLD, true)
 	for tile: Vector2i in dots:
 		var at := ORIGIN + (Vector2(tile) + Vector2(0.5, 0.5)) * Board.CELL
 		if dots[tile]:
@@ -337,7 +353,7 @@ func _draw() -> void:
 			tint = Color("#686fc0") if power_left < 2 and int(clock * 7) % 2 == 0 else Color("#354ef4")
 		var pos := ORIGIN + ghost.point() * Board.CELL
 		ghost_icon(pos, 9, tint, ghost.direction, ghost.state in [GhostState.EYES, GhostState.ENTER], ghost.scared)
-	var openness := 0.14 + 0.61 * absf(sin(clock * 11)) if player.tile != player.dest else 0.58
+	var openness := 0.14 + 0.61 * absf(sin(clock * 11)) if player.tile != player.dest and not held_keys.is_empty() else 0.58
 	if phase == Phase.DYING:
 		openness = lerpf(0.3, PI - 0.01, minf(1.0, phase_time))
 	pac_icon(ORIGIN + player.point() * Board.CELL, 9.5, Vector2(player.direction).angle(), openness)
@@ -355,28 +371,11 @@ func _draw() -> void:
 		var width := bold.get_string_size(status, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
 		draw_rect(Rect2(center - Vector2(width/2 + 6, 11), Vector2(width + 12, 22)), Color("#090b12"))
 		label(center + Vector2(-width / 2, 7), status, 18, GOLD, true)
-	draw_line(Vector2(627, 99), Vector2(627, 713), Color("#333e59"))
-	label(Vector2(660, 125), "得分", 18, MUTED)
-	label(Vector2(656, 188), "%06d" % score, 55, INK, true)
-	label(Vector2(660, 236), "生命", 18, MUTED)
-	for i in lives:
-		pac_icon(Vector2(747 + i * 30, 230), 10, 0, 0.59)
-	draw_line(Vector2(660, 269), Vector2(922, 269), Color("#333e59"))
-	label(Vector2(660, 309), "追击档案", 24, INK, true)
-	for i in 4:
-		var y := 357 + 77 * i
-		ghost_icon(Vector2(676, y + 2), 13, COLORS[i], Vector2i.LEFT)
-		label(Vector2(707, y), NAMES[i], 22, COLORS[i], true)
-		label(Vector2(707, y + 23), NOTES[i], 15, MUTED)
-	draw_line(Vector2(660, 638), Vector2(922, 638), Color("#333e59"))
-	var mode := "受惊" if power_left > 0 else ("追击" if wave % 2 else "散开")
-	label(Vector2(660, 685), "幽灵状态", 17, MUTED)
-	label(Vector2(790, 685), mode, 21, GOLD if power_left > 0 else INK, true)
-	var hint := "方向键 / WASD  移动         空格 / P  暂停"
+	var hint := "按住方向键 / WASD 移动，松开即停     ·     空格暂停"
 	if phase == Phase.READY:
-		hint = "按方向键或空格开始"
+		hint = "按住方向键 / WASD 开始移动，松开即停"
 	elif paused:
 		hint = "按空格或 P  继续游戏"
 	elif phase == Phase.OVER:
 		hint = "按回车或空格重新开局"
-	label(Vector2(38, 752), hint, 17, MUTED)
+	draw_string(font, Vector2(12, 691), hint, HORIZONTAL_ALIGNMENT_CENTER, 560, 16, MUTED)
