@@ -1,0 +1,17 @@
+config_version=5
+
+[application]
+config/name="Pac-Man"
+run/main_scene="res://game.tscn"
+config/features=PackedStringArray("4.6", "GL Compatibility")
+
+[display]
+window/size/viewport_width=960
+window/size/viewport_height=780
+window/size/window_width_override=912
+window/size/window_height_override=741
+window/stretch/mode="canvas_items"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.034, 0.043, 0.071, 1)
