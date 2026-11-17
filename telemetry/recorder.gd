@@ -5,10 +5,15 @@ var mock_markers := false
 var participant_label := ""
 
 static func output_directory() -> String:
+	var game_dir := OS.get_executable_path().get_base_dir() if OS.has_feature("template") else ProjectSettings.globalize_path("res://")
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--output-dir="):
-			return arg.trim_prefix("--output-dir=")
-	return SessionManagerScript.DEFAULT_OUTPUT_DIR
+			var path := arg.trim_prefix("--output-dir=").strip_edges()
+			if not path.is_empty():
+				if path.is_absolute_path():
+					return ProjectSettings.globalize_path(path).simplify_path()
+				return game_dir.path_join(path).simplify_path()
+	return game_dir.path_join("output").simplify_path()
 
 func begin(game) -> bool:
 	var args := OS.get_cmdline_user_args()
@@ -21,7 +26,7 @@ func begin(game) -> bool:
 			"runtime_revision": "c91ead6f67b397e5f7c5fdb098f446acbed68ef5",
 			"physics_ticks_per_second": Engine.physics_ticks_per_second}
 	}
-	if DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(output_directory())) != OK or start_session(config).is_empty():
+	if DirAccess.make_dir_recursive_absolute(config["output_dir"]) != OK or start_session(config).is_empty():
 		push_error("PsyGodot could not start the Pac-Man recording.")
 		return false
 	if "--psygodot-frames" in args:

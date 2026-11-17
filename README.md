@@ -44,13 +44,13 @@ godot --path .
 
 ### PsyGodot 行为采集与 EEG 码表
 
-直接按 **F5** 打开被试登记页，输入代号后点击 **开始记录** 或按回车。留空会记为 `anonymous`。登记页显示完整保存路径，Windows 默认在 `%APPDATA%\Godot\app_userdata\Pac-Man\psygodot`。被试代号写入每局会话清单的 `participant_label` 字段。选择 **仅试玩** 可跳过采集。也可以在项目目录打开 PowerShell，用下面的命令直接开始记录，把 P001 换成被试代号。
+直接按 **F5** 打开被试登记页，输入代号后点击 **开始记录** 或按回车。留空会记为 `anonymous`。登记页显示完整保存路径。默认写入游戏目录下的 `output` 文件夹：编辑器运行时与 `project.godot` 同级，Windows 导出版本与游戏 EXE 同级。被试代号写入每局会话清单的 `participant_label` 字段。选择 **仅试玩** 可跳过采集。也可以在项目目录打开 PowerShell，用下面的命令直接开始记录，把 P001 换成被试代号。
 
 ```powershell
 & D:\Godot\Godot_v4.6.2-stable_win64_console.exe --path . -- --psygodot --participant=P001
 ```
 
-在命令末尾加 `--psygodot-markers` 记录模拟标记，加 `--psygodot-frames` 每 6 个物理帧采一次角色位置（默认约 10 Hz）。自定义目录用 `"--output-dir=D:\study data\pacman"`。默认目录是 `user://psygodot`，启动时控制台会打印绝对路径。每次重新开局创建新的会话。用游戏窗口的关闭按钮正常退出，让后台写入器收尾；实验后核对 manifest 中的 `recording.complete` 和丢弃计数。
+在命令末尾加 `--psygodot-markers` 记录模拟标记，加 `--psygodot-frames` 每 6 个物理帧采一次角色位置（默认约 10 Hz）。用 `"--output-dir=D:\study data\pacman"` 指定其他目录，或传 `--output-dir=pilot` 写入游戏目录下的 `pilot`。启动时控制台会打印绝对路径。每次重新开局创建新的会话。用游戏窗口的关闭按钮正常退出，让后台写入器收尾；实验后核对 manifest 中的 `recording.complete` 和丢弃计数。
 
 每局输出 JSONL 原始事件及 JSON 会话清单。行为事件涵盖就位、开始、方向键按下与松开、失焦、暂停与恢复、吃豆、能量豆、吃鬼、掉命、任务拾取、奖励、过关和游戏结束。每条带单调微秒时间戳，游戏事件另带关卡、玩家格坐标、分数和生命。轨迹样本中幽灵按红、粉、青、橙排列。每项为 `[x, y, state, scared]`，状态编号依次为 0 鬼屋、1 出门、2 游走、3 回巢、4 入门。
 
