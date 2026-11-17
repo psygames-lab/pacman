@@ -1,0 +1,64 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://replay/viewer.gd" id="1"]
+
+[node name="Replay" type="Control"]
+offset_right = 584.0
+offset_bottom = 700.0
+script = ExtResource("1")
+
+[node name="Header" type="Label" parent="."]
+offset_left = 10.0
+offset_right = 574.0
+offset_bottom = 31.0
+horizontal_alignment = 1
+
+[node name="Controls" type="VBoxContainer" parent="."]
+offset_left = 12.0
+offset_right = 572.0
+offset_top = 461.0
+theme_override_constants/separation = 5
+
+[node name="Status" type="Label" parent="Controls"]
+
+[node name="Observation" type="Label" parent="Controls"]
+theme_override_font_sizes/font_size = 14
+
+[node name="Timeline" type="HSlider" parent="Controls"]
+step = 1.0
+
+[node name="Transport" type="HBoxContainer" parent="Controls"]
+[node name="Previous" type="Button" parent="Controls/Transport"]
+text = "上一步"
+[node name="Play" type="Button" parent="Controls/Transport"]
+text = "播放"
+[node name="Next" type="Button" parent="Controls/Transport"]
+text = "下一步"
+[node name="Event" type="Button" parent="Controls/Transport"]
+text = "下一事件"
+[node name="Rate" type="OptionButton" parent="Controls/Transport"]
+[node name="Export" type="Button" parent="Controls/Transport"]
+text = "导出特征"
+[node name="Close" type="Button" parent="Controls/Transport"]
+text = "返回"
+
+[node name="Inputs" type="HBoxContainer" parent="Controls"]
+[node name="Author" type="LineEdit" parent="Controls/Inputs"]
+custom_minimum_size = Vector2(135, 0)
+placeholder_text = "标注者代号"
+[node name="Label" type="LineEdit" parent="Controls/Inputs"]
+size_flags_horizontal = 3
+placeholder_text = "行为标签或观察备注"
+
+[node name="Notes" type="HBoxContainer" parent="Controls"]
+[node name="Start" type="Button" parent="Controls/Notes"]
+text = "设区间起点"
+[node name="Save" type="Button" parent="Controls/Notes"]
+text = "保存标注"
+[node name="List" type="OptionButton" parent="Controls/Notes"]
+size_flags_horizontal = 3
+fit_to_longest_item = false
+
+[node name="Message" type="Label" parent="Controls"]
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 14

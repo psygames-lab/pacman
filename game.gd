@@ -70,6 +70,8 @@ var wave_left := 7.0
 var power_left := 0.0
 var combo := 0
 var round_time := 0.0
+var life_index := 0
+var heading_change_tick := -1
 var phase_time := 0.0
 var clock := 0.0
 var paused := false
@@ -102,10 +104,26 @@ func _ready() -> void:
 	$Setup/Record.pressed.connect(func(): begin_recording($Setup/Participant.text))
 	$Setup/Participant.text_submitted.connect(begin_recording)
 	$Setup/Practice.pressed.connect(new_game)
+	$Setup/Replay.pressed.connect(func():
+		$ReplayFile.current_dir = Recorder.output_directory()
+		$ReplayFile.popup_centered_ratio(0.8))
+	$ReplayFile.file_selected.connect(open_replay)
 	if "--psygodot" in args or not participant.is_empty():
 		begin_recording(participant)
 	else:
 		$Setup/Participant.grab_focus()
+
+func open_replay(path: String) -> void:
+	var viewer := preload("res://replay/viewer.tscn").instantiate()
+	viewer.theme = $Setup.theme
+	add_child(viewer)
+	var problem: String = viewer.open_recording(path)
+	if not problem.is_empty():
+		viewer.queue_free()
+		$Setup/Location.text = problem
+		return
+	$Setup.hide()
+	viewer.closed.connect(func(): $Setup.show(); $Setup/Replay.grab_focus())
 
 func begin_recording(label_text: String) -> void:
 	if recorder == null:
@@ -126,10 +144,14 @@ func capture_state() -> Dictionary:
 	var positions := []
 	for ghost in ghosts:
 		var pos := ghost.point()
-		positions.append([pos.x, pos.y, ghost.state, ghost.scared])
+		positions.append([pos.x, pos.y, ghost.state, ghost.scared, ghost.direction.x, ghost.direction.y])
 	var pos := player.point()
 	return {"x": pos.x, "y": pos.y, "ghosts": positions, "level": level,
-		"phase": phase, "paused": paused, "power_left": power_left}
+		"phase": phase, "paused": paused, "power_left": power_left, "score": score,
+		"lives": lives, "dx": player.direction.x, "dy": player.direction.y,
+		"held_keys": held_keys.duplicate(), "tick": Engine.get_physics_frames(),
+		"life_index": life_index, "heading_changed": heading_change_tick == Engine.get_physics_frames(),
+		"wave": wave, "freeze_left": freeze_left, "double_left": double_left}
 
 func load_level() -> void:
 	stage = (level - 1) % (Stages.LAYOUTS.size() + 1) - 1
@@ -175,11 +197,14 @@ func new_game() -> void:
 	$Setup.hide()
 	board.show()
 	score = 0
+	life_index = 0
 	lives = 3
 	level = 1
 	load_level()
 
 func reset_round() -> void:
+	life_index += 1
+	heading_change_tick = -1
 	player = Actor.new(Maze.START)
 	clear_movement_input()
 	ghosts.clear()
@@ -211,7 +236,7 @@ func clear_movement_input() -> void:
 	turn_request = Vector2i.ZERO
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if $Setup.visible or not event is InputEventKey or event.echo:
+	if player == null or $Setup.visible or not event is InputEventKey or event.echo:
 		return
 	var key: Key = event.keycode
 	if not event.pressed:
@@ -262,7 +287,10 @@ func _physics_process(delta: float) -> void:
 		double_left = maxf(0, double_left - delta)
 		update_modes(delta)
 		var speed := 8.0 + minf(level - 1, 5) * 0.3
+		var facing_before := player.direction
 		advance(player, -1, speed * delta)
+		if player.direction != facing_before:
+			heading_change_tick = Engine.get_physics_frames()
 		turn_time -= delta
 		if turn_time <= 0:
 			turn_request = Vector2i.ZERO

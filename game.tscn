@@ -28,3 +28,12 @@ text = "仅试玩（不记录）"
 [node name="Location" type="Label" parent="Setup"]
 autowrap_mode = 3
 theme_override_font_sizes/font_size = 14
+
+[node name="Replay" type="Button" parent="Setup"]
+text = "回放与标注"
+
+[node name="ReplayFile" type="FileDialog" parent="."]
+title = "选择吃豆人原始记录"
+file_mode = 0
+access = 2
+filters = PackedStringArray("*_raw_events.jsonl ; 游戏会话")

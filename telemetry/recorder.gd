@@ -23,14 +23,15 @@ func begin(game) -> bool:
 		"participant_label": participant_label if not participant_label.is_empty() else "anonymous",
 		"output_dir": output_directory(),
 		"metadata": {"marker_driver": "mock" if mock_markers else "off",
+			"replay_version": 1, "sample_interval_ticks": 1,
+			"maze_layouts": [game.Maze.ROWS] + game.Stages.LAYOUTS,
 			"runtime_revision": "c91ead6f67b397e5f7c5fdb098f446acbed68ef5",
 			"physics_ticks_per_second": Engine.physics_ticks_per_second}
 	}
 	if DirAccess.make_dir_recursive_absolute(config["output_dir"]) != OK or start_session(config).is_empty():
 		push_error("PsyGodot could not start the Pac-Man recording.")
 		return false
-	if "--psygodot-frames" in args:
-		register_frame_sampler(game.capture_state, 6)
+	register_frame_sampler(game.capture_state, 1)
 	print("PsyGodot recording: ", ProjectSettings.globalize_path(get_raw_events_path()))
 	return true
 
