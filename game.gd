@@ -90,9 +90,28 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(center_layout)
 	get_window().focus_exited.connect(on_focus_lost)
 	center_layout()
-	if "--psygodot" in OS.get_cmdline_user_args():
+	board.hide()
+	$Setup.theme = Theme.new()
+	$Setup.theme.default_font = font
+	var args := OS.get_cmdline_user_args()
+	var participant := ""
+	for arg in args:
+		if arg.begins_with("--participant="):
+			participant = arg.trim_prefix("--participant=")
+	$Setup/Location.text = "数据保存至 " + ProjectSettings.globalize_path(Recorder.output_directory())
+	$Setup/Record.pressed.connect(func(): begin_recording($Setup/Participant.text))
+	$Setup/Participant.text_submitted.connect(begin_recording)
+	$Setup/Practice.pressed.connect(new_game)
+	if "--psygodot" in args or not participant.is_empty():
+		begin_recording(participant)
+	else:
+		$Setup/Participant.grab_focus()
+
+func begin_recording(label_text: String) -> void:
+	if recorder == null:
 		recorder = Recorder.new()
 		add_child(recorder)
+	recorder.participant_label = label_text.strip_edges()
 	new_game()
 
 func observe(tag: String, details: Dictionary = {}) -> void:
@@ -147,8 +166,14 @@ func center_layout() -> void:
 	position = (get_viewport_rect().size - Vector2(584, 700)) * 0.5
 
 func new_game() -> void:
-	if recorder != null:
-		recorder.begin(self)
+	if recorder != null and not recorder.begin(self):
+		$Setup.show()
+		$Setup/Location.text = "无法开始记录，请检查目录：" + ProjectSettings.globalize_path(Recorder.output_directory())
+		recorder.queue_free()
+		recorder = null
+		return
+	$Setup.hide()
+	board.show()
 	score = 0
 	lives = 3
 	level = 1
@@ -186,7 +211,7 @@ func clear_movement_input() -> void:
 	turn_request = Vector2i.ZERO
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not event is InputEventKey or event.echo:
+	if $Setup.visible or not event is InputEventKey or event.echo:
 		return
 	var key: Key = event.keycode
 	if not event.pressed:
@@ -216,7 +241,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		turn_time = TURN_BUFFER_TIME
 
 func _physics_process(delta: float) -> void:
-	if paused:
+	if player == null or paused:
 		return
 	clock += delta
 	phase_time += delta

@@ -119,6 +119,8 @@ func check_campaign() -> void:
 func run() -> void:
 	game = preload("res://game.tscn").instantiate()
 	root.add_child(game)
+	if game.get_node("Setup").visible:
+		game.get_node("Setup/Practice").pressed.emit()
 	game.set_physics_process(false)
 	var p := Vector2i(10, 10)
 	var red := Vector2i(3, 8)

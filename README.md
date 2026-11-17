@@ -44,7 +44,7 @@ godot --path .
 
 ### PsyGodot 行为采集与 EEG 码表
 
-普通启动保持游玩模式。在项目目录打开 PowerShell，用下面的命令采集一局。把 P001 换成被试代号。
+直接按 **F5** 打开被试登记页，输入代号后点击 **开始记录** 或按回车。留空会记为 `anonymous`。登记页显示完整保存路径，Windows 默认在 `%APPDATA%\Godot\app_userdata\Pac-Man\psygodot`。被试代号写入每局会话清单的 `participant_label` 字段。选择 **仅试玩** 可跳过采集。也可以在项目目录打开 PowerShell，用下面的命令直接开始记录，把 P001 换成被试代号。
 
 ```powershell
 & D:\Godot\Godot_v4.6.2-stable_win64_console.exe --path . -- --psygodot --participant=P001
