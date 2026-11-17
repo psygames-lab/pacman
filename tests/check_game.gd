@@ -109,6 +109,9 @@ func check_campaign() -> void:
 			for dot: Vector2i in game.dots.keys():
 				if game.dots.has(dot):
 					walk_to(dot)
+					# The real game yields every frame; let the recorder drain during this accelerated sweep.
+					if game.recorder != null:
+						await process_frame
 		check(game.phase == Game.Phase.CLEAR, "mission and pellets clear the stage")
 		game._physics_process(1.4)
 	check(game.level == 6 and game.stage == -1 and game.dots.size() == 244, "next arcade cycle starts")
@@ -258,7 +261,7 @@ func run() -> void:
 	check(game.phase == Game.Phase.CLEAR, "last pellet clears level")
 	game._physics_process(1.4)
 	check(game.level == 2 and game.items.size() == 2 and not game.dots.is_empty() and game.score == 10, "next level preserves score")
-	check_campaign()
+	await check_campaign()
 	if failures.is_empty():
 		print("PASS: ghost targeting, routing, maze, movement, power, lives and level cycle")
 	game.sound.stop()

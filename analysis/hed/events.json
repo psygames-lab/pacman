@@ -1,0 +1,38 @@
+{
+  "onset": {
+    "Description": "Software observation time relative to recording start.",
+    "Units": "s"
+  },
+  "duration": {
+    "Description": "Discrete observation.",
+    "Units": "s"
+  },
+  "level": {
+    "Description": "One-based arcade level."
+  },
+  "score": {
+    "Description": "Score at the game event."
+  },
+  "event_kind": {
+    "Description": "Stable event ID from the event catalog.",
+    "HED": {
+      "round_ready": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-round-ready)",
+      "round_start": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-round-start)",
+      "pause": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-pause)",
+      "resume": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-resume)",
+      "direction_key": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-direction-key)",
+      "pellet": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-pellet)",
+      "power_pellet": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-power-pellet)",
+      "ghost_captured": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-ghost-captured)",
+      "life_lost": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-life-lost)",
+      "task_item": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-task-item)",
+      "task_reward": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-task-reward)",
+      "level_clear": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-level-clear)",
+      "game_over": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-game-over)",
+      "focus_lost": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-focus-lost)"
+    }
+  },
+  "marker_code": {
+    "Description": "Assigned catalog marker code; not evidence of transmission or EEG receipt."
+  }
+}

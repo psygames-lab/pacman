@@ -1,0 +1,423 @@
+{
+  "catalog_id": "pacman.default",
+  "catalog_version": "1.0.0",
+  "game_name": "pacman",
+  "mapping_version": "1.0.0",
+  "raw_schema_version": "0.2.0",
+  "hed_schema_version": "8.3.0",
+  "sidecar": "events.json",
+  "rules": [
+    {
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "round_ready"
+      },
+      "columns": {
+        "event_kind": "round_ready",
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        }
+      }
+    },
+    {
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "round_start"
+      },
+      "columns": {
+        "event_kind": "round_start",
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "marker_code": 10
+      }
+    },
+    {
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "pause"
+      },
+      "columns": {
+        "event_kind": "pause",
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "marker_code": 11
+      }
+    },
+    {
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "resume"
+      },
+      "columns": {
+        "event_kind": "resume",
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "marker_code": 12
+      }
+    },
+    {
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "direction_key"
+      },
+      "columns": {
+        "event_kind": "direction_key",
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "key": {
+          "path": "payload.key"
+        },
+        "pressed": {
+          "path": "payload.pressed"
+        }
+      }
+    },
+    {
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "pellet"
+      },
+      "columns": {
+        "event_kind": "pellet",
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        }
+      }
+    },
+    {
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "power_pellet"
+      },
+      "columns": {
+        "event_kind": "power_pellet",
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "marker_code": 20
+      }
+    },
+    {
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "ghost_captured"
+      },
+      "columns": {
+        "event_kind": "ghost_captured",
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "ghost": {
+          "path": "payload.ghost"
+        },
+        "combo": {
+          "path": "payload.combo"
+        },
+        "marker_code": 21
+      }
+    },
+    {
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "life_lost"
+      },
+      "columns": {
+        "event_kind": "life_lost",
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "ghost": {
+          "path": "payload.ghost"
+        },
+        "marker_code": 22
+      }
+    },
+    {
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "task_item"
+      },
+      "columns": {
+        "event_kind": "task_item",
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "item": {
+          "path": "payload.item"
+        },
+        "remaining": {
+          "path": "payload.remaining"
+        },
+        "marker_code": 30
+      }
+    },
+    {
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "task_reward"
+      },
+      "columns": {
+        "event_kind": "task_reward",
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "reward": {
+          "path": "payload.reward"
+        },
+        "marker_code": 31
+      }
+    },
+    {
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "level_clear"
+      },
+      "columns": {
+        "event_kind": "level_clear",
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "marker_code": 40
+      }
+    },
+    {
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "game_over"
+      },
+      "columns": {
+        "event_kind": "game_over",
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "marker_code": 41
+      }
+    },
+    {
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "focus_lost"
+      },
+      "columns": {
+        "event_kind": "focus_lost",
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        }
+      }
+    },
+    {
+      "match": {
+        "event_type": "session",
+        "event_tag": "session_start"
+      },
+      "exclude": "Session bookkeeping is retained in the raw recording."
+    },
+    {
+      "match": {
+        "event_type": "session",
+        "event_tag": "session_end"
+      },
+      "exclude": "Session bookkeeping is retained in the raw recording."
+    },
+    {
+      "match": {
+        "event_type": "frame",
+        "event_tag": "frame_sample"
+      },
+      "exclude": "Continuous game state is retained in raw JSONL."
+    },
+    {
+      "match": {
+        "event_type": "marker",
+        "event_tag": "marker_sent"
+      },
+      "exclude": "Mock marker audit; source event is exported."
+    }
+  ]
+}

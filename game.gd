@@ -5,6 +5,7 @@ const Stages = preload("res://stages.gd")
 const AI = preload("res://ghost_ai.gd")
 const Board = preload("res://maze_view.gd")
 const Sounds = preload("res://sounds.gd")
+const Recorder = preload("res://telemetry/recorder.gd")
 const ORIGIN = Vector2(12, 47)
 const CORNER_WINDOW := 0.42 # tiles either side of a junction
 const TURN_BUFFER_TIME := 0.15
@@ -53,6 +54,7 @@ var item_total := 0
 var freeze_left := 0.0
 var double_left := 0.0
 var player: Actor
+var recorder: Recorder
 var ghosts: Array[Actor] = []
 var dots: Dictionary
 var home_distance := {}
@@ -86,9 +88,29 @@ func _ready() -> void:
 	add_child(board)
 	add_child(sound)
 	get_viewport().size_changed.connect(center_layout)
-	get_window().focus_exited.connect(clear_movement_input)
+	get_window().focus_exited.connect(on_focus_lost)
 	center_layout()
+	if "--psygodot" in OS.get_cmdline_user_args():
+		recorder = Recorder.new()
+		add_child(recorder)
 	new_game()
+
+func observe(tag: String, details: Dictionary = {}) -> void:
+	if recorder == null or not recorder.session_active:
+		return
+	var timestamp := Time.get_ticks_usec()
+	details.merge({"level": level, "lives": lives, "score": score,
+		"tile_x": player.tile.x, "tile_y": player.tile.y})
+	recorder.observe(tag, details, timestamp)
+
+func capture_state() -> Dictionary:
+	var positions := []
+	for ghost in ghosts:
+		var pos := ghost.point()
+		positions.append([pos.x, pos.y, ghost.state, ghost.scared])
+	var pos := player.point()
+	return {"x": pos.x, "y": pos.y, "ghosts": positions, "level": level,
+		"phase": phase, "paused": paused, "power_left": power_left}
 
 func load_level() -> void:
 	stage = (level - 1) % (Stages.LAYOUTS.size() + 1) - 1
@@ -125,6 +147,8 @@ func center_layout() -> void:
 	position = (get_viewport_rect().size - Vector2(584, 700)) * 0.5
 
 func new_game() -> void:
+	if recorder != null:
+		recorder.begin(self)
 	score = 0
 	lives = 3
 	level = 1
@@ -149,7 +173,13 @@ func reset_round() -> void:
 	wave_left = WAVE[0]
 	round_time = 0
 	dot_count = 0
+	observe("round_ready")
 	queue_redraw()
+
+func on_focus_lost() -> void:
+	if player != null:
+		observe("focus_lost")
+	clear_movement_input()
 
 func clear_movement_input() -> void:
 	held_keys.clear()
@@ -160,6 +190,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	var key: Key = event.keycode
 	if not event.pressed:
+		if held_keys.has(key):
+			observe("direction_key", {"key": OS.get_keycode_string(key), "pressed": false})
 		held_keys.erase(key)
 		if held_keys.is_empty():
 			turn_request = Vector2i.ZERO
@@ -169,11 +201,14 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if key in [KEY_P, KEY_ESCAPE, KEY_SPACE] and phase == Phase.PLAY:
 		paused = not paused
+		observe("pause" if paused else "resume")
 		queue_redraw()
 		return
 	if phase == Phase.READY and (DIRECTIONS.has(key) or key in [KEY_ENTER, KEY_SPACE]):
 		phase = Phase.PLAY
+		observe("round_start")
 	if phase == Phase.PLAY and DIRECTIONS.has(key):
+		observe("direction_key", {"key": OS.get_keycode_string(key), "pressed": true})
 		held_keys.erase(key)
 		held_keys.push_front(key)
 		var wanted: Vector2i = DIRECTIONS[key]
@@ -190,6 +225,9 @@ func _physics_process(delta: float) -> void:
 			reset_round()
 		else:
 			phase = Phase.OVER
+			observe("game_over")
+			if recorder != null:
+				recorder.end_session("game_over")
 	elif phase == Phase.CLEAR and phase_time >= 1.3:
 		level += 1
 		load_level()
@@ -340,12 +378,14 @@ func ghost_step(ghost: Actor, kind: int) -> Vector2i:
 
 func eat_dot() -> void:
 	if items.erase(player.tile):
+		observe("task_item", {"item": Stages.ITEMS[stage], "remaining": items.size()})
 		if items.is_empty():
 			match stage:
 				0: score += 500
 				1: freeze_left = 5.0
 				2: double_left = 12.0
 				3: lives += 1
+			observe("task_reward", {"reward": Stages.REWARDS[stage]})
 		sound.cue("reward" if items.is_empty() else "item")
 	elif dots.has(player.tile):
 		eat_pellet()
@@ -353,6 +393,7 @@ func eat_dot() -> void:
 		return
 	if dots.is_empty() and items.is_empty():
 		phase = Phase.CLEAR
+		observe("level_clear")
 		phase_time = 0
 		sound.cue("clear")
 
@@ -361,6 +402,7 @@ func eat_pellet() -> void:
 	dots.erase(player.tile)
 	dot_count += 1
 	score += (50 if power else 10) * (2 if double_left > 0 else 1)
+	observe("power_pellet" if power else "pellet")
 	if power:
 		power_left = maxf(2, 6 - (level - 1) * 0.5)
 		combo = 0
@@ -385,10 +427,12 @@ func collide(ghost: Actor) -> void:
 		combo += 1
 		ghost.scared = false
 		ghost.state = GhostState.EYES
+		observe("ghost_captured", {"ghost": ghosts.find(ghost), "combo": combo})
 		sound.cue("capture")
 	else:
 		lives -= 1
 		phase = Phase.DYING
+		observe("life_lost", {"ghost": ghosts.find(ghost)})
 		phase_time = 0
 		sound.cue("death")
 

@@ -42,6 +42,39 @@ godot --path .
 
 ## 验证
 
+### PsyGodot 行为采集与 EEG 码表
+
+普通启动保持游玩模式。在项目目录打开 PowerShell，用下面的命令采集一局。把 P001 换成被试代号。
+
+```powershell
+& D:\Godot\Godot_v4.6.2-stable_win64_console.exe --path . -- --psygodot --participant=P001
+```
+
+在命令末尾加 `--psygodot-markers` 记录模拟标记，加 `--psygodot-frames` 每 6 个物理帧采一次角色位置（默认约 10 Hz）。自定义目录用 `"--output-dir=D:\study data\pacman"`。默认目录是 `user://psygodot`，启动时控制台会打印绝对路径。每次重新开局创建新的会话。用游戏窗口的关闭按钮正常退出，让后台写入器收尾；实验后核对 manifest 中的 `recording.complete` 和丢弃计数。
+
+每局输出 JSONL 原始事件及 JSON 会话清单。行为事件涵盖就位、开始、方向键按下与松开、失焦、暂停与恢复、吃豆、能量豆、吃鬼、掉命、任务拾取、奖励、过关和游戏结束。每条带单调微秒时间戳，游戏事件另带关卡、玩家格坐标、分数和生命。轨迹样本中幽灵按红、粉、青、橙排列。每项为 `[x, y, state, scared]`，状态编号依次为 0 鬼屋、1 出门、2 游走、3 回巢、4 入门。
+
+| 软件事件 | 研究码 |
+| --- | --- |
+| 本条生命开始可操作、暂停、恢复 | 10、11、12 |
+| 吃能量豆、吃鬼、掉命 | 20、21、22 |
+| 拾取任务道具、发放任务奖励 | 30、31 |
+| 过关、游戏结束 | 40、41 |
+
+模拟标记行带有 `driver=mock`、研究码和指向原始事件的 `linked_event_id`。这些时间描述游戏逻辑观察时刻。当前集成没有 LSL 或 TTL 输出。接 EEG 时需配置匹配的发送端，并在 EEG 记录端验证收码、时钟对齐和延迟；视觉刺激的实际亮起时刻可用光电二极管核对。
+
+事件和码表的维护入口是 `telemetry/event_catalog.json`。运行时及离线工具来源为 [PsyGodot c91ead6](https://github.com/psygames-lab/psygodot/tree/c91ead6f67b397e5f7c5fdb098f446acbed68ef5)。以下示例假定两个仓库相邻。HED 转换需先在 Python 环境中安装 PsyGodot 的 `analysis/requirements.txt`。将文件变量指向同一局的文件，导出目录需为新路径。
+
+```powershell
+python ../psygodot/analysis/validate_events.py $raw --manifest $manifest
+python ../psygodot/analysis/convert_hed.py $raw --manifest $manifest --mapping analysis/hed/mapping.json --output $newOutputDir
+python ../psygodot/analysis/generate_catalog.py telemetry/event_catalog.json --markers telemetry/marker_config.json --hed-dir analysis/hed --check
+```
+
+导出的 `events.tsv` 以游戏会话起点计时，配套 `events.json` 包含 HED 注释。与 EEG 合并前需换算到该次 EEG 记录的时间轴。
+
+### 游戏回归测试
+
 ```sh
 godot --headless --path . --script res://tests/check_game.gd
 ```

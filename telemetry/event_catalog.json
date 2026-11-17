@@ -1,0 +1,455 @@
+{
+  "catalog_id": "pacman.default",
+  "catalog_version": "1.0.0",
+  "game_name": "pacman",
+  "raw_schema_version": "0.2.0",
+  "hed_schema_version": "8.3.0",
+  "column_metadata": {
+    "onset": {
+      "Description": "Software observation time relative to recording start.",
+      "Units": "s"
+    },
+    "duration": {
+      "Description": "Discrete observation.",
+      "Units": "s"
+    },
+    "level": {
+      "Description": "One-based arcade level."
+    },
+    "score": {
+      "Description": "Score at the game event."
+    }
+  },
+  "events": [
+    {
+      "id": "round_ready",
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "round_ready"
+      },
+      "hed": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-round-ready)",
+      "columns": {
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        }
+      }
+    },
+    {
+      "id": "round_start",
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "round_start"
+      },
+      "marker_code": 10,
+      "hed": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-round-start)",
+      "columns": {
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        }
+      }
+    },
+    {
+      "id": "pause",
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "pause"
+      },
+      "marker_code": 11,
+      "hed": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-pause)",
+      "columns": {
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        }
+      }
+    },
+    {
+      "id": "resume",
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "resume"
+      },
+      "marker_code": 12,
+      "hed": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-resume)",
+      "columns": {
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        }
+      }
+    },
+    {
+      "id": "direction_key",
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "direction_key"
+      },
+      "hed": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-direction-key)",
+      "columns": {
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "key": {
+          "path": "payload.key"
+        },
+        "pressed": {
+          "path": "payload.pressed"
+        }
+      }
+    },
+    {
+      "id": "pellet",
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "pellet"
+      },
+      "hed": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-pellet)",
+      "columns": {
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        }
+      }
+    },
+    {
+      "id": "power_pellet",
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "power_pellet"
+      },
+      "marker_code": 20,
+      "hed": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-power-pellet)",
+      "columns": {
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        }
+      }
+    },
+    {
+      "id": "ghost_captured",
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "ghost_captured"
+      },
+      "marker_code": 21,
+      "hed": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-ghost-captured)",
+      "columns": {
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "ghost": {
+          "path": "payload.ghost"
+        },
+        "combo": {
+          "path": "payload.combo"
+        }
+      }
+    },
+    {
+      "id": "life_lost",
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "life_lost"
+      },
+      "marker_code": 22,
+      "hed": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-life-lost)",
+      "columns": {
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "ghost": {
+          "path": "payload.ghost"
+        }
+      }
+    },
+    {
+      "id": "task_item",
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "task_item"
+      },
+      "marker_code": 30,
+      "hed": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-task-item)",
+      "columns": {
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "item": {
+          "path": "payload.item"
+        },
+        "remaining": {
+          "path": "payload.remaining"
+        }
+      }
+    },
+    {
+      "id": "task_reward",
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "task_reward"
+      },
+      "marker_code": 31,
+      "hed": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-task-reward)",
+      "columns": {
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        },
+        "reward": {
+          "path": "payload.reward"
+        }
+      }
+    },
+    {
+      "id": "level_clear",
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "level_clear"
+      },
+      "marker_code": 40,
+      "hed": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-level-clear)",
+      "columns": {
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        }
+      }
+    },
+    {
+      "id": "game_over",
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "game_over"
+      },
+      "marker_code": 41,
+      "hed": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-game-over)",
+      "columns": {
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        }
+      }
+    },
+    {
+      "id": "focus_lost",
+      "match": {
+        "event_type": "gameplay",
+        "event_tag": "focus_lost"
+      },
+      "hed": "Agent-action, Task-activity, (Controller-agent, Label/PacMan-focus-lost)",
+      "columns": {
+        "duration": 0,
+        "level": {
+          "path": "payload.level"
+        },
+        "score": {
+          "path": "payload.score"
+        },
+        "tile_x": {
+          "path": "payload.tile_x"
+        },
+        "tile_y": {
+          "path": "payload.tile_y"
+        },
+        "lives": {
+          "path": "payload.lives"
+        }
+      }
+    },
+    {
+      "id": "session_start",
+      "match": {
+        "event_type": "session",
+        "event_tag": "session_start"
+      },
+      "exclude": "Session bookkeeping is retained in the raw recording."
+    },
+    {
+      "id": "session_end",
+      "match": {
+        "event_type": "session",
+        "event_tag": "session_end"
+      },
+      "exclude": "Session bookkeeping is retained in the raw recording."
+    },
+    {
+      "id": "frame_sample",
+      "match": {
+        "event_type": "frame",
+        "event_tag": "frame_sample"
+      },
+      "exclude": "Continuous game state is retained in raw JSONL."
+    },
+    {
+      "id": "marker_sent",
+      "match": {
+        "event_type": "marker",
+        "event_tag": "marker_sent"
+      },
+      "exclude": "Mock marker audit; source event is exported."
+    }
+  ]
+}
